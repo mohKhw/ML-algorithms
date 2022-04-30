@@ -64,16 +64,31 @@ def knn_classification(X_train, y_train, x_new, k=5):
         elif values[0]==0:
             y_new_pred = 0
     else:
-        if counts[0] > counts[1]:   #i am not sure
+        if counts[0] > counts[1] and values[0]==0:   #i am not sure
             y_new_pred = 0
-        else:
+        elif counts[0] > counts[1] and values[0]==1:   
+            y_new_pred = 1
+        elif counts[1] > counts[0] and values[1]==0:  
+            y_new_pred = 0
+        elif counts[1] > counts[0] and values[1]==1:  
             y_new_pred = 1
     return y_new_pred
-    #ynew = sum(secondList)/len(secondList)
-
 
 def logistic_regression_training(X_train, y_train, alpha=0.01, max_iters=5000, random_seed=1):
-    return 997
+    copyX_train = np.array(X_train) #maybe there is no need for np.array
+    rows, cols = copyX_train.shape
+    oneArray = np.ones((rows,1))        # I guess this is its size
+    finalXArray = np.hstack((oneArray,copyX_train))
+    np.random.seed(random_seed) 
+    num_of_features = cols+1      # I guess so, right?
+    weights = np.random.normal(loc=0.0, scale=1.0, size=(num_of_features, 1))
+    TransFXA = finalXArray.transpose()  #TransposedFinalXArray
+    negativeX = -1*finalXArray
+    for x in range(max_iters):
+        ePart = np.exp(negativeX@weights)   #was negativeX*weights
+        sigmoidFun = 1/(1+ePart) 
+        weights = weights - alpha*TransFXA@(sigmoidFun-y_train) #was TransFXA*(sigmoidFun-y_train)
+    return weights
 
 def logistic_regression_prediction(X, weights, threshold=0.5):
     return 996

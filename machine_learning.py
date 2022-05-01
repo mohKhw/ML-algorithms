@@ -91,21 +91,17 @@ def logistic_regression_training(X_train, y_train, alpha=0.01, max_iters=5000, r
     return weights
 
 def logistic_regression_prediction(X, weights, threshold=0.5):
-    copyX = np.array(X) #maybe there is no need for np.array
-    rows, cols = copyX.shape
-    oneArray = np.ones((rows,1))        # I guess this is its size
-    finalXArray = np.hstack((oneArray,copyX))
-    negativeX = -1*finalXArray
-    ePart = np.exp(negativeX@weights)   #was negativeX*weights
-    sigmoidFun = 1/(1+ePart)
-    rows, cols = sigmoidFun.shape
-    y_preds = []
-    for x in range(rows):
-        if x < threshold:
-            y_preds.append(0)
+    rows, cols = X.shape
+    oneArray = np.ones((rows,1))
+    finalXArray = np.hstack((oneArray,X))
+    y_preds = 1/(1 + np.exp((-1*finalXArray)@weights))
+    rowss, colss = y_preds.shape
+    for x in range(rowss):
+        if y_preds[x] < threshold:
+            y_preds[x]=0
         else:
-            y_preds.append(1)
-    return y_preds
+            y_preds[x]=1
+    return np.array(y_preds)
 
 
 

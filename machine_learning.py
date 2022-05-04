@@ -33,12 +33,8 @@ def knn_classification(X_train, y_train, x_new, k=5):
     indecies_list=np.array(euc_list)[gg]
     yslist=[]   #this will contain the y values in order of the indecies in the indecies_list
     for i in range(k):
-        print(k)
         yslist.append(y_train[euc_list.index(indecies_list[i])])
-        print(yslist)
     values, counts = np.unique(yslist, return_counts=True)  #This will count how many 1s and 0s is there
-    print(counts)
-    print(values)
     if 0 not in values:
         y_new_pred=1
     else:

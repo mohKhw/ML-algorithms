@@ -20,58 +20,29 @@ def preprocess_classification_dataset():
     test_output = csv_reader_test[['output']]
     X_test = test_feat_df.values
     y_test = test_output.values
-    print(X_train)
-    print(y_train)
     return X_train, y_train, X_val, y_val, X_test, y_test
 
 def knn_classification(X_train, y_train, x_new, k=5):
-    #firstList=[]
-    secondList=[]
+    euc_list=[]
+    temp=0
     for x in X_train:
-        firstList=[]
-        temp = 0
-        for r in x:
-            value = (x[temp]-x_new[temp])**2
-            firstList.append(value)
-        euc=(sum(firstList))**(1/2)
-        secondList.append(euc)
-    minList=secondList
-    kNearest=[]
-    xsList=[]   #a list the will have the indecies of the nearest Ks (Xs)
-    #smallest=0
-    for i in range(0,k):
-        #tempCount=0
-        index=0
-        minimum=9999999
-        for j in range(len(minList)):
-            if minList[j]<minimum:
-                minimum=minList[j]
-                index=secondList.index(minList[j])
-                #xsList.append(tempCount)
-                #smallest=tempCount
-            #tempCount+=1
-        #xsList.append(smallest)
-        xsList.append(index)
-        minList.remove(minimum)
-        kNearest.append(minimum)
-    yslist=[]
-    for x in xsList:
-        yslist.append(y_train[x])
-    values, counts = np.unique(yslist, return_counts=True)
-    if len(counts)==1:
-        if values[0]==1:
-            y_new_pred = 1
-        elif values[0]==0:
-            y_new_pred = 0
+        euc_list.append(np.linalg.norm(x-x_new))
+        temp +=1
+    indecies_list=[] 
+    gg=np.argsort(euc_list)
+    indecies_list=np.array(euc_list)[gg]
+    yslist=[]   #this will contain the y values in order of the indecies in the indecies_list
+    for i in range(k):
+        print(k)
+        yslist.append(y_train[euc_list.index(indecies_list[i])])
+        print(yslist)
+    values, counts = np.unique(yslist, return_counts=True)  #This will count how many 1s and 0s is there
+    print(counts)
+    print(values)
+    if 0 not in values:
+        y_new_pred=1
     else:
-        if counts[0] > counts[1] and values[0]==0:   #i am not sure
-            y_new_pred = 0
-        elif counts[0] > counts[1] and values[0]==1:   
-            y_new_pred = 1
-        elif counts[1] > counts[0] and values[1]==0:  
-            y_new_pred = 0
-        elif counts[1] > counts[0] and values[1]==1:  
-            y_new_pred = 1
+        y_new_pred =np.argmax(counts)                           #This will return the index of max of the counts.
     return y_new_pred
 
 def logistic_regression_training(X_train, y_train, alpha=0.01, max_iters=5000, random_seed=1):
@@ -95,17 +66,58 @@ def logistic_regression_prediction(X, weights, threshold=0.5):
     oneArray = np.ones((rows,1))
     finalXArray = np.hstack((oneArray,X))
     y_preds = 1/(1 + np.exp((-1*finalXArray)@weights))
-    rowss, colss = y_preds.shape
-    for x in range(rowss):
+    y_rows, y_cols = y_preds.shape
+    for x in range(y_rows):
         if y_preds[x] < threshold:
             y_preds[x]=0
         else:
             y_preds[x]=1
     return np.array(y_preds)
 
-
-
-
-
 def model_selection_and_evaluation(alpha=0.01, max_iters=5000, random_seed=1, threshold=0.5):
-    return 995
+    X_train, y_train, X_val, y_val, X_test, y_test = preprocess_classification_dataset()
+
+    pred_one_nn=knn_classification(X_train,y_train,X_val,1) 
+    pred_three_nn=knn_classification(X_train,y_train,X_val,3) 
+    pred_five_nn=knn_classification(X_train,y_train,X_val,5) 
+    weights=logistic_regression_training(X_train,y_train,alpha,max_iters,random_seed)
+    pred_logistic=logistic_regression_prediction(X_train,weights,threshold)
+    
+    true_one_nn=knn_classification(X_test,y_test,X_val,1) 
+    true_three_nn=knn_classification(X_test,y_test,X_val,3) 
+    true_five_nn=knn_classification(X_test,y_test,X_val,5) 
+    t_weights=logistic_regression_training(X_test,y_test,alpha,max_iters,random_seed)
+    true_logistic=logistic_regression_prediction(X_test,t_weights,threshold)
+
+    acc1=(true_one_nn.flatten() == pred_one_nn.flatten()).sum() /true_one_nn.shape[0]
+    acc2=(true_three_nn.flatten() == pred_three_nn.flatten()).sum() /true_three_nn.shape[0]
+    acc3=(true_five_nn.flatten() == pred_five_nn.flatten()).sum() /true_five_nn.shape[0]
+    acc4=(true_logistic.flatten() == pred_logistic.flatten()).sum() /true_logistic.shape[0]
+    list_of_acc=[acc1,acc2,acc3,acc4]
+    max_index = np.argmax(list_of_acc, axis=0)
+    
+    X_train_val_merge = np.vstack([X_train, X_val]) 
+    y_train_val_merge = np.vstack([y_train, y_val])
+
+    name=""
+    if(max_index==0):
+        winner=knn_classification(X_train_val_merge,y_train_val_merge,X_test,1)
+        name="1nn"
+        true=true_one_nn
+    elif(max_index==1):
+        winner=knn_classification(X_train_val_merge,y_train_val_merge,X_test,3)
+        name="3nn"
+        true=true_three_nn
+    elif(max_index==2):
+        winner=knn_classification(X_train_val_merge,y_train_val_merge,X_test,5)
+        name="5nn"
+        true=true_five_nn
+    elif(max_index==3):
+        weights=logistic_regression_training(X_train,y_train,alpha,max_iters,random_seed)
+        winner=logistic_regression_prediction(X_train,weights,threshold)
+        true=true_logistic
+        name="logistic regression"
+    
+    test_acc=(true.flatten() == winner.flatten()).sum() /true.shape[0]
+    
+    return name,list_of_acc,test_acc

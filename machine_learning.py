@@ -42,19 +42,19 @@ def knn_classification(X_train, y_train, x_new, k=5):
     return y_new_pred
 
 def logistic_regression_training(X_train, y_train, alpha=0.01, max_iters=5000, random_seed=1):
-    copyX_train = np.array(X_train) #maybe there is no need for np.array
+    copyX_train = np.array(X_train) 
     rows, cols = copyX_train.shape
-    oneArray = np.ones((rows,1))        # I guess this is its size
+    oneArray = np.ones((rows,1))       
     finalXArray = np.hstack((oneArray,copyX_train))
     np.random.seed(random_seed) 
-    num_of_features = cols+1      # I guess so, right?
+    num_of_features = cols+1     
     weights = np.random.normal(loc=0.0, scale=1.0, size=(num_of_features, 1))
     TransFXA = finalXArray.transpose()  #TransposedFinalXArray
     negativeX = -1*finalXArray
     for x in range(max_iters):
-        ePart = np.exp(negativeX@weights)   #was negativeX*weights
+        ePart = np.exp(negativeX@weights)  
         sigmoidFun = 1/(1+ePart) 
-        weights = weights - alpha*TransFXA@(sigmoidFun-y_train) #was TransFXA*(sigmoidFun-y_train)
+        weights = weights - alpha*TransFXA@(sigmoidFun-y_train)
     return weights
 
 def logistic_regression_prediction(X, weights, threshold=0.5):
@@ -73,47 +73,60 @@ def logistic_regression_prediction(X, weights, threshold=0.5):
 def model_selection_and_evaluation(alpha=0.01, max_iters=5000, random_seed=1, threshold=0.5):
     X_train, y_train, X_val, y_val, X_test, y_test = preprocess_classification_dataset()
 
-    pred_one_nn=knn_classification(X_train,y_train,X_val,1) 
-    pred_three_nn=knn_classification(X_train,y_train,X_val,3) 
-    pred_five_nn=knn_classification(X_train,y_train,X_val,5) 
+    pred_one_nn=[]
+    pred_three_nn=[]
+    pred_five_nn=[]
+    for x in X_val:
+        p1 = knn_classification(X_train,y_train,x,1)
+        pred_one_nn.append(p1)
+        p3 = knn_classification(X_train,y_train,x,3)
+        pred_three_nn.append(p3)
+        p5 = knn_classification(X_train,y_train,x,5) 
+        pred_five_nn.append(p5)
     weights=logistic_regression_training(X_train,y_train,alpha,max_iters,random_seed)
-    pred_logistic=logistic_regression_prediction(X_train,weights,threshold)
-    
-    true_one_nn=knn_classification(X_test,y_test,X_val,1) 
-    true_three_nn=knn_classification(X_test,y_test,X_val,3) 
-    true_five_nn=knn_classification(X_test,y_test,X_val,5) 
-    t_weights=logistic_regression_training(X_test,y_test,alpha,max_iters,random_seed)
-    true_logistic=logistic_regression_prediction(X_test,t_weights,threshold)
+    pred_logistic=logistic_regression_prediction(X_val,weights,threshold) 
 
-    acc1=(true_one_nn.flatten() == pred_one_nn.flatten()).sum() /true_one_nn.shape[0]
-    acc2=(true_three_nn.flatten() == pred_three_nn.flatten()).sum() /true_three_nn.shape[0]
-    acc3=(true_five_nn.flatten() == pred_five_nn.flatten()).sum() /true_five_nn.shape[0]
-    acc4=(true_logistic.flatten() == pred_logistic.flatten()).sum() /true_logistic.shape[0]
-    list_of_acc=[acc1,acc2,acc3,acc4]
-    max_index = np.argmax(list_of_acc, axis=0)
-    
+    pred_one_nn=np.array(pred_one_nn)
+    pred_three_nn=np.array(pred_three_nn)
+    pred_five_nn=np.array(pred_five_nn)
+    accuracy1 = (y_val.flatten() == pred_one_nn.flatten()).sum() /y_val.shape[0]
+    accuracy3 = (y_val.flatten() == pred_three_nn.flatten()).sum() /y_val.shape[0]
+    accuracy5 = (y_val.flatten() == pred_five_nn.flatten()).sum() /y_val.shape[0]
+    accuracylog = (y_val.flatten() == pred_logistic.flatten()).sum() /y_val.shape[0]
+    accuracy = [accuracy1,accuracy3,accuracy5,accuracylog]
+
+    max_index = np.argmax(accuracy, axis=0)
+
     X_train_val_merge = np.vstack([X_train, X_val]) 
     y_train_val_merge = np.vstack([y_train, y_val])
 
     name=""
     if(max_index==0):
-        winner=knn_classification(X_train_val_merge,y_train_val_merge,X_test,1)
+        ppp1=[]
+        for x in X_test:
+            pp1 = knn_classification(X_train_val_merge,y_train_val_merge,x,1)
+            ppp1.append(pp1)
+        winner=ppp1
         name="1nn"
-        true=true_one_nn
     elif(max_index==1):
-        winner=knn_classification(X_train_val_merge,y_train_val_merge,X_test,3)
+        ppp3=[]
+        for x in X_test:
+            pp3 = knn_classification(X_train_val_merge,y_train_val_merge,x,3)
+            ppp3.append(pp3)
+        winner=ppp3
         name="3nn"
-        true=true_three_nn
     elif(max_index==2):
-        winner=knn_classification(X_train_val_merge,y_train_val_merge,X_test,5)
+        ppp5=[]
+        for x in X_test:
+            pp5 = knn_classification(X_train_val_merge,y_train_val_merge,x,5)
+            ppp5.append(pp5)
+        winner=ppp5
         name="5nn"
-        true=true_five_nn
     elif(max_index==3):
-        weights=logistic_regression_training(X_train,y_train,alpha,max_iters,random_seed)
-        winner=logistic_regression_prediction(X_train,weights,threshold)
-        true=true_logistic
-        name="logistic regression"
-    
-    test_acc=(true.flatten() == winner.flatten()).sum() /true.shape[0]
-    
-    return name,list_of_acc,test_acc
+        weights=logistic_regression_training(X_train_val_merge,y_train_val_merge,alpha,max_iters,random_seed)
+        winner=logistic_regression_prediction(X_test,weights,threshold)
+        name="logistic regression"        
+
+    winner=np.array(winner)
+    test_acc = (y_test.flatten() == winner.flatten()).sum() /y_test.shape[0]
+    return name,accuracy,test_acc
